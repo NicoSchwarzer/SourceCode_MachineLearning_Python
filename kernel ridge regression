@@ -1,0 +1,225 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+
+
+#####################
+## Assignment No 6 ##
+#####################
+
+
+import os
+import numpy as np
+import pandas as pd 
+import os 
+import scipy
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+
+
+
+
+## loading in data ##
+
+direct = "C:/Users/Nico/Documents/Uni/2. Sem/Stat ML/EX/EX7"
+                        
+os.chdir(direct)
+
+
+a = np.load("diabetes_data.npy", allow_pickle=True).item()
+
+
+result = a.items()
+data = list(result)
+data2 = np.array(data, dtype=object)
+
+data2.shape
+
+# finally retrieving data: 
+    
+# Xtest
+print("the values for " + str(data2[0,0]) + " are stored in data2[0,1].")
+Xtest =  data2[0,1]
+
+#Xtrain
+print("the values for " + str(data2[1,0]) + " are stored in data2[1,1].")
+Xtrain = data2[1,1]
+
+#Ytrain
+print("the values for " + str(data2[2,0]) + " are stored in data2[2,1].")
+Ytrain = data2[2,1]
+
+#Ytest
+print("the values for " + str(data2[3,0]) + " are stored in data2[3,1].")
+Ytest = data2[3,1]
+
+
+
+
+
+## define a few things ## 
+
+####
+X = Xtrain
+x1 = Xtrain[1,:]
+x2 = Xtrain[2,:]
+mu = 1
+
+lambdas = 0.1
+###
+
+
+# gauss kernel
+def g_kernel(mu, x1, x2 ):
+    x = x1 - x2
+    k = np.exp(-mu * np.linalg.norm(x)**2)
+    return k 
+
+
+
+# kernel matrix
+def kernel_matrix(mu, X1, X2):
+    
+        
+    dim1 = X1.shape[0]
+    dim2 = X2.shape[0]
+    
+    K_matrix = np.ones([dim2, dim1])
+    
+    for i in range(dim2):
+        for j in range(dim1):
+            
+            K_matrix[i,j] = g_kernel(mu, X2[i,:], X1[j,:])
+            
+    return K_matrix
+
+
+
+
+def get_alpha(mu, K, lambdas, Y):
+    
+    
+    n = K.shape[0]
+    
+    
+    a1 = np.linalg.inv(np.matmul(K,K) - n* lambdas * K) 
+    a2 = np.matmul(K,Y)
+    a3 = np.matmul(a1,a2) 
+
+    return a3
+             
+
+
+#asd = kernel_matrix(0.1, Xtrain, Xtest)
+#asd.shape
+
+
+def ridge_reg_test(mu, lambdas, Xtrain, Ytrain, Xtest, Ytest):
+    
+    K_train = kernel_matrix(mu, Xtrain, Xtrain)
+    alphas = get_alpha(mu, K_train, lambdas, Ytrain)
+    
+    yhat_train = np.matmul(K_train, alphas)
+    
+    n = Xtrain.shape[0]
+    loss_train = 1/n * 0.5 * np.linalg.norm(yhat_train-Ytrain)**2  # no regu
+    
+
+    ## testing 
+    
+    K_test = kernel_matrix(mu, Xtrain, Xtest)
+    yhat_test = np.matmul(K_test, alphas)
+    
+    n2 = Xtest.shape[0]
+    loss_test = 1/n2 * 0.5 * np.linalg.norm(yhat_test-Ytest)**2  # no regu
+    
+    
+
+    return loss_train, loss_test
+
+    
+    
+    
+#[loss_1, loss_2] = ridge_reg_test(0.1, 0.1, Xtrain, Ytrain, Xtest, Ytest)
+
+
+
+
+## using CV ##
+
+
+lambdas_ = [10**(-i) for i in range(4)]
+mus_ = [10**(-i) for i in range(4)]
+
+CVErros = np.ones([len(lambdas_), len(mus_)])
+
+
+
+
+
+def get_CV_error(mu, alpha, Xtrain, Ytrain):
+
+    
+    errors = []
+    a1 = int(0)
+    a2 = int(Xtrain.shape[0] / 5 - 1)
+
+
+    while a2 < (X.shape[0]+1):
+        
+        x = list(map(int, list(np.linspace(a1,a2,50) )))
+        
+            
+        Xtrain_train = np.delete(Xtrain, x, 0)
+        Xtrain_eval = Xtrain[x, :]
+        
+        Ytrain_train = np.delete(Ytrain, x, 0)
+        Ytrain_eval = Ytrain[x, :]
+        
+        
+        [loss_1, loss_2] = ridge_reg_test(mu, lambdas, Xtrain_train, Ytrain_train, Xtrain_eval, Ytrain_eval)
+        
+        errors.append(loss_2)
+        
+        a1  = a1 + 50
+        a2 = a2 + 50
+            
+    
+    mean_error = np.mean(errors)
+
+    return mean_error
+
+
+
+
+
+get_CV_error(0.1, 0.1, Xtrain, Ytrain)
+
+
+
+
+## filling in CVError matrix
+
+for a in range(4):
+    
+    for b in range(4):
+        
+        la = lambdas_[a]
+        mu = mus_[b]
+        
+        CVErros[a, b] = get_CV_error(la, mu, Xtrain, Ytrain)
+        
+
+        
+
+# -> adding labels to np.array
+# -> same matrix for train loss
+# -> same matrix for test loss
+
+
+#  plotting
+
