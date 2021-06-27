@@ -1,0 +1,325 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jun 27 13:05:59 2021
+
+@author: Nico
+"""
+
+##################
+## Assignment 8 ##
+##################
+
+
+import os
+import numpy as np
+import pandas as pd 
+import os 
+import scipy
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator
+import itertools
+
+
+
+## loading in data ##
+
+direct = "C:/Users/Nico/Documents/Uni/2. Sem/Stat ML/EX/EX8"
+                        
+os.chdir(direct)
+
+a = np.load("DataFeatSel.npy", allow_pickle=True).item()
+
+
+result = a.items()
+data = list(result)
+data2 = np.array(data, dtype=object)
+
+data2.shape
+
+# finally retrieving data: 
+    
+# Xtrain
+print("the values for " + str(data2[0,0]) + " are stored in data2[0,1].")
+Xtrain =  data2[0,1]
+
+#Ytrain
+print("the values for " + str(data2[1,0]) + " are stored in data2[1,1].")
+Ytrain = data2[1,1]
+
+#Ytest
+print("the values for " + str(data2[2,0]) + " are stored in data2[2,1].")
+Ytest = data2[2,1]
+
+#Xtest
+print("the values for " + str(data2[3,0]) + " are stored in data2[3,1].")
+Xtest = data2[3,1]
+
+
+
+
+
+# accuracy = tp+tn/ P+N
+
+# adding ones for OLS
+
+Xtrain2 = np.ones([Xtrain.shape[0], Xtrain.shape[1] + 1])
+
+for i in range(15):
+    Xtrain2[:,i+1] = Xtrain[:,i]
+
+
+
+a = [1,2]
+
+list(itertools.combinations(a, 1))
+
+
+
+## all possible combinations   
+# each row -> one combination 
+
+all_combi = np.array(list(itertools.product(range(2), repeat=15)))
+
+
+## defining function for losses
+
+def OLS_and_error(Xt, Yt, X_val,  Y_val):
+
+
+    # computing weights
+    c1 = np.linalg.inv(np.matmul(Xt.T, Xt))
+    c2 = np.matmul(Xt.T, Yt)
+    
+    w = np.matmul(c1, c2)
+    
+    # computing prediction
+    pred = np.sign(np.matmul(X_val, w))
+    
+    # loss
+    all_loss = np.absolute(Y_val - pred)
+    loss = 0.5 * 1/ X_val.shape[0]* np.sum(all_loss)
+    
+    return loss
+
+
+
+## function for 5-fold CV:
+    
+    
+
+def five_fold_CV(Xtrain, combi):
+    
+    a = 0
+    b = 7
+    i = 0
+    
+    losses = np.ones(5)
+    
+   # dropping featureds
+    dont_keep = np.where(combi == 0)[0]
+    
+    # creating new X, maybe adding intercept
+    X2 =  np.delete(Xtrain, dont_keep, 1)
+  
+    while a < 40:
+        
+        X_val = X2[a:b,:]
+        Y_val = Ytrain[a:b,:]
+        
+        lsp = list(np.linspace(a,b,8))
+        lsp = [int(item) for item in lsp]
+        
+        Xt =  np.delete(X2, lsp, 0)
+        Yt = np.delete(Ytrain, lsp, 0)
+        
+        
+        loss = OLS_and_error(Xt, Yt, X_val,  Y_val)
+        
+        losses[i] = loss
+    
+        a = a + 8
+        b = b + 8
+        i = i + 1       
+    
+
+    avg_loss = np.average(losses)
+    
+    return avg_loss
+
+
+     
+## computing all CV losses
+
+cv_losses = np.ones(len(all_combi))
+
+
+for i in range(len(all_combi)):
+
+    # 
+    combi = all_combi[i,:]
+    loss_cv = five_fold_CV(Xtrain,combi)
+    
+    cv_losses[i] = loss_cv
+    
+
+
+# checking where the mininum was found 
+
+min_value = min(cv_losses)
+
+min_index = np.argmin(cv_losses)
+
+best_combi = all_combi[min_index,:]
+
+#
+feats = np.where(best_combi == 1)[0]
+
+# keeping the features No 4, No 10 and No 11!
+
+print("We shall keep the features ",  str(feats[0]+1),", ",str(feats[1]+1)," and ",str(feats[2]+1),"!")
+
+
+## learning classifier!
+
+dont_keep = np.where(best_combi == 0)[0]
+X_best =  np.delete(Xtrain, dont_keep, 1)
+
+c1 = np.linalg.inv(np.matmul(X_best.T, X_best))
+c2 = np.matmul(X_best.T, Ytrain)
+w = np.matmul(c1, c2)
+
+
+# predicting and test loss 
+
+X_test_best =  np.delete(Xtest, dont_keep, 1)
+pred_test = np.sign(np.matmul(X_test_best, w))
+all_loss = np.absolute(Ytest - pred_test)
+loss_test = 0.5 * 1/ X_test_best.shape[0]* np.sum(all_loss)
+
+
+
+# different because of the extremely small size of CV sets (only 8)
+# maybe 
+
+
+
+
+
+##########
+## NO 2 ##
+##########
+
+## weong without considering test set ??
+
+# HO: independence of X and Y
+# if data were truly independent -> best_error (always) = 0.5 !!
+
+# rejected if 
+
+# p-value grows as t > t original
+
+
+# independence Xi, Yi 
+# i.e. of those Xi, which are in best subset 
+
+# test stat: best cv error 
+
+# if data were truly independent -> best_error (always) = 0.5 !!
+    
+
+## best subset again: 
+
+Xtrain_smaller = Xtrain[:,[0,1,2,3,4,5]]
+Xtest_smaller = Xtest[:,[0,1,2,3,4,5]]
+
+## massive loop
+
+np.random.seed(1)
+
+for i in range(1000):
+    
+    # getting permutations    
+    X_perm = np.random.permutation(Xtrain_smaller)
+
+
+
+
+
+
+### loss original 
+
+all_combi_smaller = np.array(list(itertools.product(range(2), repeat= 6)))
+
+cv_losses_smaller = np.ones(len(all_combi_smaller))
+
+
+for i in range(len(all_combi_smaller)):
+
+    # 
+    combi = all_combi_smaller[i,:]
+    loss_cv = five_fold_CV(Xtrain_smaller,combi)
+    
+    cv_losses_smaller[i] = loss_cv
+                     
+
+# getting best feature subset and computing respective weight vector
+
+
+min_cv_error_original = min(cv_losses_smaller)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+min_index_2 = np.argmin(cv_losses_smaller)
+best_combi_2 = all_combi_smaller[min_index_2,:]
+feats_2 = np.where(best_combi_2 == 1)[0]
+# keeping the features No 1, 4
+dont_keep = np.where(best_combi_2 == 0)[0]
+X_best =  np.delete(Xtrain_smaller, dont_keep, 1)
+c1 = np.linalg.inv(np.matmul(X_best.T, X_best))
+c2 = np.matmul(X_best.T, Ytrain)
+w = np.matmul(c1, c2)
+
+y_pred = np.matmul(X_best, w)
+loss_all = np.absolute(y_pred - Ytrain)
+loss = 
+
+np.random.seed(1)
+
+
+
+np.random.permutation(6)
+Xtrain_smaller[1,:]
+
+ 
+
+
