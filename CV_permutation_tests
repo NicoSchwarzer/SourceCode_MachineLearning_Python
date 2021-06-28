@@ -59,24 +59,6 @@ Xtest = data2[3,1]
 
 
 
-
-# accuracy = tp+tn/ P+N
-
-# adding ones for OLS
-
-Xtrain2 = np.ones([Xtrain.shape[0], Xtrain.shape[1] + 1])
-
-for i in range(15):
-    Xtrain2[:,i+1] = Xtrain[:,i]
-
-
-
-a = [1,2]
-
-list(itertools.combinations(a, 1))
-
-
-
 ## all possible combinations   
 # each row -> one combination 
 
@@ -199,11 +181,11 @@ all_loss = np.absolute(Ytest - pred_test)
 loss_test = 0.5 * 1/ X_test_best.shape[0]* np.sum(all_loss)
 
 
+print("The new test loss is: ", str(loss_test), "!")
+
 
 # different because of the extremely small size of CV sets (only 8)
 # maybe 
-
-
 
 
 
@@ -213,12 +195,12 @@ loss_test = 0.5 * 1/ X_test_best.shape[0]* np.sum(all_loss)
 
 ## weong without considering test set ??
 
-# HO: independence of X and Y
+# HO: independence of X(i) and Y(i)
+
 # if data were truly independent -> best_error (always) = 0.5 !!
+# p-value grows as t > t original -> work only for for 0 centered t-stat under Ho
 
-# rejected if 
 
-# p-value grows as t > t original
 
 
 # independence Xi, Yi 
@@ -229,29 +211,15 @@ loss_test = 0.5 * 1/ X_test_best.shape[0]* np.sum(all_loss)
 # if data were truly independent -> best_error (always) = 0.5 !!
     
 
-## best subset again: 
+
+### error original ###
+
 
 Xtrain_smaller = Xtrain[:,[0,1,2,3,4,5]]
 Xtest_smaller = Xtest[:,[0,1,2,3,4,5]]
 
-## massive loop
-
-np.random.seed(1)
-
-for i in range(1000):
-    
-    # getting permutations    
-    X_perm = np.random.permutation(Xtrain_smaller)
-
-
-
-
-
-
-### loss original 
 
 all_combi_smaller = np.array(list(itertools.product(range(2), repeat= 6)))
-
 cv_losses_smaller = np.ones(len(all_combi_smaller))
 
 
@@ -269,57 +237,57 @@ for i in range(len(all_combi_smaller)):
 
 min_cv_error_original = min(cv_losses_smaller)
 
+print("The original CV loss is ", min_cv_error_original, "!")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-min_index_2 = np.argmin(cv_losses_smaller)
-best_combi_2 = all_combi_smaller[min_index_2,:]
-feats_2 = np.where(best_combi_2 == 1)[0]
-# keeping the features No 1, 4
-dont_keep = np.where(best_combi_2 == 0)[0]
-X_best =  np.delete(Xtrain_smaller, dont_keep, 1)
-c1 = np.linalg.inv(np.matmul(X_best.T, X_best))
-c2 = np.matmul(X_best.T, Ytrain)
-w = np.matmul(c1, c2)
-
-y_pred = np.matmul(X_best, w)
-loss_all = np.absolute(y_pred - Ytrain)
-loss = 
-
+### other cv errors ###
 np.random.seed(1)
 
+cv_errors_perm = np.ones(1000)
+
+a = 0
 
 
-np.random.permutation(6)
-Xtrain_smaller[1,:]
+while a < 1000:
+    
+    # getting permutations    
+    X_perm = np.random.permutation(Xtrain_smaller)
+    
+    cv_losses = np.ones(len(all_combi_smaller))
 
+    # same cacultation as above 
+    for i in range(len(all_combi_smaller)):
+
+        
+        combi_perm = all_combi_smaller[i,:]
+        loss_cv_perm = five_fold_CV(X_perm,combi_perm)
+    
+        cv_losses[i] = loss_cv_perm
+        
+                     
+    min_cv_error_perm = min(cv_losses)
+        
+    cv_errors_perm[a] =  min_cv_error_perm
+        
+    a = a + 1
+     
+    
+    
+# now have have the permutational distribution     
+plt.hist(cv_errors_perm)
+
+
+# 0.05% of that 
+five_perc_percentile = np.percentile(cv_errors_perm, 0.05)
  
+print("The 5_% quantile of the hereby obtained permutational distribution is ", five_perc_percentile, "!")
 
 
+## doing the actual test
+
+if min_cv_error_original > five_perc_percentile:
+    print("We cannot reject H0 of independence with a 5% significance level")
+    print("This suggests that the data are truly independet")
+else:
+    print("We can reject H0 of independence with a 5% significance level")
+    
