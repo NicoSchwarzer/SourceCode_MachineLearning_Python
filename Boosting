@@ -1,0 +1,260 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jul  4 10:55:22 2021
+
+@author: Nico
+"""
+
+
+######################
+##  Assignment No 9 ##
+######################
+
+
+import pandas as pd
+import numpy as np
+import os
+import scipy
+import matplotlib.pyplot as plt
+
+
+## loading in data ##
+
+direct = "C:/Users/Nico/Documents/Uni/2. Sem/Stat ML/EX/EX9"
+
+os.chdir(direct)
+
+a = np.load("USPS_data.npy", allow_pickle=True).item()
+
+
+result = a.items()
+data = list(result)
+data2 = np.array(data, dtype=object)
+
+data2.shape
+
+# finally retrieving data:
+
+# Xtrain
+print("the values for " + str(data2[0, 0]) + " are stored in data2[0,1].")
+Xtrain = data2[0, 1]
+
+# Ytest
+print("the values for " + str(data2[1, 0]) + " are stored in data2[1,1].")
+Ytest = data2[1, 1]
+
+# Xtest
+print("the values for " + str(data2[2, 0]) + " are stored in data2[2,1].")
+Xtest = data2[2, 1]
+
+# Ytrain
+print("the values for " + str(data2[3, 0]) + " are stored in data2[3,1].")
+Ytrain = data2[3, 1]
+
+
+# b)
+
+
+# howb ?
+# for every w*b, there is one combination which yields w*x +b = 0. this combo
+# indicates the b -threshold!
+
+# these b-tresholds arr of different size, so take all those, the smallest - 1
+# and the largest plus one and one obtaons a full rankge of possible betas
+
+
+ww = np.ones([Xtrain.shape[1], 1])
+
+
+AA = np.matmul(Xtrain, ww)
+
+
+AA.shape
+X = Xtrain
+Y = Ytrain
+w = ww
+gamma = np.ones([Xtrain.shape[0], 1])
+
+
+
+
+def FitStump(X, Y, w, gamma):
+
+    # 1  - >b
+
+    getting_b_1 = np.matmul(X, w)
+    b_tresholds = - getting_b_1
+
+    # 2 -> a,c
+    alphas = np.ones(len(b_tresholds))
+    cs = np.ones(len(b_tresholds))
+
+    index = 0
+
+    for i in b_tresholds:
+
+        stump_out =   np.maximum((np.matmul(X, w) + i), 0) / np.maximum((np.matmul(X, w) + i), 10**(-10)) 
+
+        alphas[index] = 1/X.shape[0] * np.sum(2*Y / (1+stump_out + 10**(-10)))
+
+        cs[index] = 1/X.shape[0] *  np.sum(stump_out * (2*np.mean(Y) / (1 + np.mean(stump_out))))
+
+        index = index + 1
+
+    # 3 -> error
+
+    errors = np.ones(len(b_tresholds))
+    
+    for i in range(len(b_tresholds)):
+
+        func_out_1 =  np.maximum((np.matmul(X, w) + i), 0) / np.maximum((np.matmul(X, w) + i), 10**(-10)) 
+
+        
+        func_out = alphas[i] * func_out_1 + cs[i]
+        
+        
+        errors = np.matmul(gamma.T,(Y - func_out)**2)
+        
+    
+    index_min = np.argmin(errors)
+    
+    alpha = alphas[index_min]
+    b = b_tresholds[index_min]
+   # b = b[0]
+    c = cs[index_min]
+    min_Error = np.amin(errors)
+    
+    return alpha, b, c, min_Error
+
+
+
+
+
+def GentleBoost(X,Y,k):
+    
+    
+    ## w 
+    w = np.random.randn(X.shape[1])
+    w= w/np.linalg.norm(w)
+
+
+    # init gammas
+    gamma = np.ones(X.shape[0]) / X.shape[0] 
+    
+   
+    W = np.ones([X.shape[1], k])
+    aparam = np.ones([1,k])
+    bparam = np.ones([1,k])
+    cparam = np.ones([1,k])
+    
+    classifiers = np.zeros([X.shape[0],1])
+    train_errors = np.ones([1,k])
+    
+    classifiers_test = np.zeros([X_test_b.shape[0],1])
+    test_errors= np.ones([1,k])
+    
+    a = 0
+    
+    while a < k:
+        
+        [alpha, b, c, Error] =  FitStump(X, Y, w, gamma)
+        
+        W[:,a] = w
+        aparam[0,a] = alpha
+        bparam[0, a] = b 
+        cparam[0, a] = c
+    
+        
+        
+    
+        # for train error
+        func_out_1 =  np.maximum((np.matmul(X, w) + b), 0) / np.maximum((np.matmul(X, w) + b), 10**(-10)) 
+
+        
+        func_out = alpha * func_out_1 + c
+        func_out = func_out.reshape(func_out.shape[0],1)
+        
+        
+        
+        ## training error now ##
+        
+        #error_this_iter = err
+        
+        classifiers = classifiers + func_out
+        
+        classifiers.shape
+        
+        loss_train = np.sum (    (Y.reshape(Y.shape[0],1) - classifiers)**2)
+        
+        train_errors[0,a] = loss_train
+        
+        ## test error ##
+        
+        func_out_test_1 =  np.maximum((np.matmul(X_test_b, w) + b), 0) / np.maximum((np.matmul(X_test_b, w) + b), 10**(-10)) 
+
+        func_out_test = alpha * func_out_test_1 + c
+        func_out_test = func_out_test.reshape(func_out_test.shape[0],1)
+        
+        classifiers_test = classifiers_test + func_out_test
+        
+        
+        loss_test = np.sum (    (Y_test_b.reshape(Y_test_b.shape[0],1) - classifiers_test)**2)
+        
+        test_errors[0,a] = loss_test
+
+
+                
+
+
+        # updating gamma!        
+        gamma = gamma * np.exp( - Y * func_out )
+        
+        gamma = gamma / np.sum(gamma)
+        
+        
+        a = a + 1
+    
+    
+    return W, aparam, bparam, cparam, train_errors, test_errors
+
+    
+    
+    
+    
+### d 
+
+
+# only considering binary data 
+
+DF_train = pd.DataFrame(Xtrain)
+DF_train["Y"] = Ytrain
+DF_train = DF_train[DF_train.Y < 2]
+X_train_b = np.array(DF_train.iloc[:,0:255])
+Y_train_b = np.array(DF_train.iloc[:,256]).reshape(712,1)
+
+
+##
+
+DF_test = pd.DataFrame(Xtest)
+DF_test["Y"] = Ytest
+DF_test = DF_test[DF_test.Y < 2]
+X_test_b = np.array(DF_test.iloc[:,0:255])
+Y_test_b = np.array(DF_test.iloc[:,256]).reshape(623,1)
+
+
+
+[ W, aparam, bparam, cparam, train_errors, test_errors] = GentleBoost(X_train_b,Y_train_b,200)
+
+
+# training errors
+
+xx = np.linspace(1,train_errors.shape[1], train_errors.shape[1]).reshape(1, train_errors.shape[1])
+plt.plot(xx.T,train_errors.T)
+
+
+# test errors
+
+xx2 = np.linspace(1,test_errors.shape[1], test_errors.shape[1]).reshape(1, test_errors.shape[1])
+plt.plot(xx2.T,test_errors.T)
+
+
